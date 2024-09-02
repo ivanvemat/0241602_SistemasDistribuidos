@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	. "server"
+	. "server/log/config"
 
 	"github.com/stretchr/testify/require"
 )

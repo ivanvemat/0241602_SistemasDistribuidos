@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	. "server"
+	. "server/log/config"
 
 	"github.com/tysonmote/gommap"
 )

@@ -5,13 +5,10 @@ import (
 	"net/http"
 	"sync"
 
+	. "server/api/v1"
+
 	"github.com/gorilla/mux"
 )
-
-type Record struct {
-	Value  []byte `json:"value"`
-	Offset uint64 `json:"offset"`
-}
 
 type RecordWrapper struct {
 	Record Record `json:"record"`
