@@ -11,7 +11,7 @@ import (
 )
 
 type RecordWrapper struct {
-	Record Record `json:"record"`
+	Record *Record `json:"record"`
 }
 
 type OffsetWrapper struct {
@@ -46,7 +46,7 @@ func addLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record.Offset = uint64(len(log.records))
-	log.records = append(log.records, record)
+	log.records = append(log.records, *record)
 	var offsetWrapper OffsetWrapper
 	offsetWrapper.Offset = record.Offset
 
@@ -82,7 +82,7 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var recordWrapper RecordWrapper
-	recordWrapper.Record = log.records[offsetWrapper.Offset]
+	recordWrapper.Record = &log.records[offsetWrapper.Offset]
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

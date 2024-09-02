@@ -1,11 +1,9 @@
-package index
+package log
 
 import (
 	"io"
 	"os"
 	"testing"
-
-	. "server/log/config"
 
 	"github.com/stretchr/testify/require"
 )

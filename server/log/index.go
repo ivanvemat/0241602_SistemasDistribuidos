@@ -1,17 +1,13 @@
-package index
+package log
 
 import (
-	"encoding/binary"
 	"io"
 	"os"
-
-	. "server/log/config"
 
 	"github.com/tysonmote/gommap"
 )
 
 var (
-	enc             = binary.BigEndian
 	offWidth uint64 = 4
 	posWidth uint64 = 8
 	entWidth uint64 = offWidth + posWidth
