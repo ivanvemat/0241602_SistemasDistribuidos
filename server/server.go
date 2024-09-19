@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"os"
 	api "server/api/v1"
 	log "server/log"
 
@@ -86,3 +89,27 @@ func (s *grpcServer) ConsumeStream(req *api.ConsumeRequest, stream api.Log_Consu
 		}
 	}
 } 
+
+func main() {
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	dir, err := os.MkdirTemp("..", "log_data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	server := grpc.NewServer()
+	commitLog, err := log.NewLog(dir, log.Config{})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	api.RegisterLogServer(server, &grpcServer{CommitLog: commitLog})
+	server.Serve(listener)
+}
