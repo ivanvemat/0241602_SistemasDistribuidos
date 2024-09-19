@@ -1,98 +1,79 @@
 package main
 
 import (
-	"encoding/json"
-	"net/http"
-	"sync"
-
+	"context"
 	api "server/api/v1"
-
-	"github.com/gorilla/mux"
+	log "server/log"
 )
 
-type RecordWrapper struct {
-	Record *api.Record `json:"record"`
+var _ api.LogServer = (*grpcServer)(nil)
+
+type grpcServer struct {
+	api.UnimplementedLogServer
+	CommitLog *log.Log
 }
 
-type OffsetWrapper struct {
-	Offset uint64 `json:"offset"`
+func newgrpcServer(commitlog *log.Log) (srv *grpcServer, err error) {
+	srv = &grpcServer{
+		CommitLog: commitlog,
+	}
+	return srv, nil
 }
 
-type Log struct {
-	mu      sync.Mutex
-	records []api.Record
-}
-
-var log Log
-
-func addLog(w http.ResponseWriter, r *http.Request) {
-	log.mu.Lock()
-	defer log.mu.Unlock()
-	var recordWrapper RecordWrapper
-	err := json.NewDecoder(r.Body).Decode(&recordWrapper)
-
+func (s *grpcServer) Produce(ctx context.Context, req *api.ProduceRequest) (*api.ProduceResponse, error) {
+	offset, err := s.CommitLog.Append(req.Record)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
-
-	record := recordWrapper.Record
-
-	if record.Value == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error": "Missing 'value' field in record"}`))
-		return
-	}
-
-	record.Offset = uint64(len(log.records))
-	log.records = append(log.records, *record)
-	var offsetWrapper OffsetWrapper
-	offsetWrapper.Offset = record.Offset
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(offsetWrapper)
+	return &api.ProduceResponse{Offset: offset}, nil
 }
 
-func getLog(w http.ResponseWriter, r *http.Request) {
-	log.mu.Lock()
-	defer log.mu.Unlock()
-
-	if len(log.records) == 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error": "Empty log"}`))
-		return
-	}
-
-	var offsetWrapper OffsetWrapper
-	err := json.NewDecoder(r.Body).Decode(&offsetWrapper)
-
+func (s *grpcServer) Consume(ctx context.Context, req *api.ConsumeRequest) (*api.ConsumeResponse, error) {
+	record, err := s.CommitLog.Read(req.Offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		re, ok := err.(*api.ErrOffsetOutOfRange)
+		if ok {
+			return nil, re.GRPCStatus().Err()
+		}
+		return nil, err
 	}
-
-	if uint64(len(log.records)) <= offsetWrapper.Offset {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error": "Record not found"}`))
-		return
-	}
-
-	var recordWrapper RecordWrapper
-	recordWrapper.Record = &log.records[offsetWrapper.Offset]
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(recordWrapper)
+	return &api.ConsumeResponse{Record: record}, nil
 }
 
-func main() {
-	router := mux.NewRouter()
-
-	router.HandleFunc("/", addLog).Methods("POST")
-	router.HandleFunc("/", getLog).Methods("GET")
-	http.ListenAndServe(":8080", router)
+func (s *grpcServer) ProduceStream(stream api.Log_ProduceStreamServer) error {
+	for {
+		req, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		res, err := s.Produce(stream.Context(), req)
+		if err != nil {
+			return err
+		}
+		if err = stream.Send(res); err != nil {
+			return err
+		}
+	}
 }
+
+func (s *grpcServer) ConsumeStream(req *api.ConsumeRequest, stream api.Log_ConsumeStreamServer) error {
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		default:
+			res, err := s.Consume(stream.Context(), req)
+			switch err.(type) {
+			case nil:
+			case api.ErrOffsetOutOfRange:
+				continue
+			default:
+				return err
+			}
+			if err = stream.Send(res); err != nil {
+				return err
+			}
+			req.Offset++
+		}
+	}
+} 
