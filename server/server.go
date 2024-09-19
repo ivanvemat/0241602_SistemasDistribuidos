@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"sync"
 
-	. "server/api/v1"
+	api "server/api/v1"
 
 	"github.com/gorilla/mux"
 )
 
 type RecordWrapper struct {
-	Record *Record `json:"record"`
+	Record *api.Record `json:"record"`
 }
 
 type OffsetWrapper struct {
@@ -20,7 +20,7 @@ type OffsetWrapper struct {
 
 type Log struct {
 	mu      sync.Mutex
-	records []Record
+	records []api.Record
 }
 
 var log Log
