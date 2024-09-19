@@ -4,19 +4,28 @@ import (
 	"context"
 	api "server/api/v1"
 	log "server/log"
+
+	"google.golang.org/grpc"
 )
 
 var _ api.LogServer = (*grpcServer)(nil)
+
+type Config struct {
+	CommitLog *log.Log
+}
 
 type grpcServer struct {
 	api.UnimplementedLogServer
 	CommitLog *log.Log
 }
 
-func newgrpcServer(commitlog *log.Log) (srv *grpcServer, err error) {
-	srv = &grpcServer{
-		CommitLog: commitlog,
+func NewGRPCServer(config *Config) (srv *grpc.Server, err error) {
+	server := &grpcServer{
+		CommitLog: config.CommitLog,
 	}
+	var opts []grpc.ServerOption
+	srv = grpc.NewServer(opts...)
+	api.RegisterLogServer(srv, server)
 	return srv, nil
 }
 
