@@ -40,9 +40,9 @@ func (s *grpcServer) Produce(ctx context.Context, req *api.ProduceRequest) (*api
 func (s *grpcServer) Consume(ctx context.Context, req *api.ConsumeRequest) (*api.ConsumeResponse, error) {
 	record, err := s.CommitLog.Read(req.Offset)
 	if err != nil {
-		re, ok := err.(*api.ErrOffsetOutOfRange)
+		outOfRange, ok := err.(*api.ErrOffsetOutOfRange)
 		if ok {
-			return nil, re.GRPCStatus().Err()
+			return nil, outOfRange.GRPCStatus().Err()
 		}
 		return nil, err
 	}
