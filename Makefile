@@ -1,6 +1,6 @@
 # Esto nos ayuda a posicionar nuestros config files en una carpeta dentro de nuestro proyecto
 
-CONFIG_PATH=${HOME}/Documents/UP/Computo/0241602_SistemasDistribuidos/.0241602_SistemasDistribuidos/
+CONFIG_PATH=${HOME}/Documents/UP/Computo/0241602_SistemasDistribuidos/.0241602_SistemasDistribuidos
 
 .PHONY: init
 
@@ -15,18 +15,36 @@ init:
 gencert:
 	cfssl gencert \
 		-initca test/ca-csr.json | cfssljson -bare ca
+
 	cfssl gencert \
 		-ca=ca.pem \
 		-ca-key=ca-key.pem \
 		-config=test/ca-config.json \
 		-profile=server \
 		test/server-csr.json | cfssljson -bare server
+
 	cfssl gencert \
 		-ca=ca.pem \
 		-ca-key=ca-key.pem \
 		-config=test/ca-config.json \
 		-profile=client \
 		test/client-csr.json | cfssljson -bare client
+
+	cfssl gencert \
+		-ca=ca.pem \
+		-ca-key=ca-key.pem \
+		-config=test/ca-config.json \
+		-profile=client \
+		-cn="root" \
+		test/client-csr.json | cfssljson -bare root-client
+
+	cfssl gencert \
+		-ca=ca.pem \
+		-ca-key=ca-key.pem \
+		-config=test/ca-config.json \
+		-profile=client \
+		-cn="nobody" \
+		test/client-csr.json | cfssljson -bare nobody-client
 	mv *.pem *.csr ${CONFIG_PATH}
 
 compile:
@@ -34,7 +52,13 @@ compile:
 					--go_out=.\
 					--go_opt=paths=source_relative \
 					--proto_path=.
-test:
+$(CONFIG_PATH)/model.conf:
+	cp test/model.conf $(CONFIG_PATH)/model.conf
+
+$(CONFIG_PATH)/policy.csv:
+	cp test/policy.csv $(CONFIG_PATH)/policy.csv
+
+test: $(CONFIG_PATH)/policy.csv $(CONFIG_PATH)/model.conf
 	go test -race ./...
 compile_rpc:
 	protoc api/v1/*.proto \
@@ -42,3 +66,4 @@ compile_rpc:
 	--go_opt=paths=source_relative \
     --go-grpc_out=. \
 	--go-grpc_opt=paths=source_relative \
+	--proto_path=.
