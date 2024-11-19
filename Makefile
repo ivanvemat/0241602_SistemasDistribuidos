@@ -1,6 +1,6 @@
 # Esto nos ayuda a posicionar nuestros config files en una carpeta dentro de nuestro proyecto
 
-# CONFIG_PATH?=${HOME}/Documents/UP/Computo/0241602_SistemasDistribuidos/.0241602_SistemasDistribuidos
+CONFIG_PATH?=${HOME}/Documents/UP/Computo/0241602_SistemasDistribuidos/.0241602_SistemasDistribuidos
 
 .PHONY: init
 
@@ -52,10 +52,10 @@ compile:
 					--go_out=.\
 					--go_opt=paths=source_relative \
 					--proto_path=.
-$(CONFIG_PATH)/model.conf:
+copy_model:
 	cp test/model.conf $(CONFIG_PATH)/model.conf
 
-$(CONFIG_PATH)/policy.csv:
+copy_policy:
 	cp test/policy.csv $(CONFIG_PATH)/policy.csv
 
 test: $(CONFIG_PATH)/policy.csv $(CONFIG_PATH)/model.conf
