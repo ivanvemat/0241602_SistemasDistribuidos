@@ -1,6 +1,6 @@
 # Esto nos ayuda a posicionar nuestros config files en una carpeta dentro de nuestro proyecto
 
-CONFIG_PATH=${HOME}/Documents/UP/Computo/0241602_SistemasDistribuidos/.0241602_SistemasDistribuidos
+# CONFIG_PATH?=${HOME}/Documents/UP/Computo/0241602_SistemasDistribuidos/.0241602_SistemasDistribuidos
 
 .PHONY: init
 
